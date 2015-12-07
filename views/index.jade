@@ -1,5 +1,6 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
+  - each stuff in stuffs
+  p
+    = stuff.sentence

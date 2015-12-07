@@ -12,7 +12,6 @@
     "express": "~4.12.2",
     "jade": "~1.9.2",
     "morgan": "~1.5.1",
-    "node-json2html": "^1.0.0",
     "numeric": "^1.2.6",
     "request": "^2.54.0",
     "serve-favicon": "~2.2.0"

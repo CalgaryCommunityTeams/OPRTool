@@ -33,9 +33,9 @@ app.use('/opr', function(req, res) {
         matches;
     function check(object) {
         teams = object.teams || teams;
-        matches = object.Matches || matches;
+        matches = object.Schedule || matches;
         if (teams && matches) {
-            res.send(process(teams, matches));
+            res.send(process(teams,matches));
         }
     }
     
@@ -50,16 +50,19 @@ app.use('/opr', function(req, res) {
         }
     });
     request.get({
-        url : prefix + '/matches/2015/' + req.url.substring(1),
+        url : prefix + '/schedule/2015/' + req.url.substring(1) + '/qual/hybrid',
         headers : {
             'accept' : 'application/json'
         }
     }, function(error, response, body) {
-
         if (!error && response.statusCode == 200) {
             check(JSON.parse(body));
         }
     });
+});
+
+app.use('/',function(req, res) {
+    res.render('index',{});
 });
 
 // catch 404 and forward to error handler

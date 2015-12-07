@@ -13,33 +13,44 @@ module.exports = function(teamsRaw, matchesRaw) {
 		});
 	});
 	matchesRaw.forEach(function(match, i) {
-		processMatch(match, played, points, teamNumbers);
+		processOPRForMatch(match, played, points, teamNumbers);
 	});
 	var opr = numeric.solve(played, points);
-	var ret = [teamNumbers, opr];
-	return ret[0].map(function(col, i) {
-		return ret.map(function(row) {
+	
+	var temp = [teamNumbers, opr];
+	var retOpr = temp[0].map(function(col, i) {
+		return temp.map(function(row) {
 			return row[i];
 		});
 	}).sort(function(a, b) {
 		return Number(b[1]) - Number(a[1]);
 	});
+	
+	var matchPredict=[];
+	matchesRaw.forEach(function(match, i) {
+		if (match.scoreRedFinal!=null) {
+			matchPredict.push(convertMatch(match));
+		} else {
+	    	matchPredict.push(predictMatch(match.Teams,opr,teamNumbers));
+		}
+	});
+	
+/*	var games=[];
+	
+	played.forEach(function(a,i){
+		games[i] = played[i][i];
+	});*/
+	
+	var predictTotal = calcAverage(matchPredict,teamNumbers).sort(function(a, b) {
+		return Number(b[1]) - Number(a[1]);
+	});
+	
+	return {OPR:retOpr,matchPredict:matchPredict,predictTotal:predictTotal};
 };
 
-function processMatch(match, played, points, teamNumbers) {
+function processOPRForMatch(match, played, points, teamNumbers) {
 	var red = [],
 	    blue = [];
-	match.Teams.forEach(function(team) {
-		var t = teamNumbers.indexOf(team.teamNumber);
-		if (team.station.substring(0, 3) == "Red") {
-			red.push(team.teamNumber);
-			points[t] += match.scoreRedFinal;
-		} else {
-			blue.push(team.teamNumber);
-			points[t] += match.scoreBlueFinal;
-		}
-
-	});
 	function addToPlayed(teamsToAdd) {
 		teamsToAdd.forEach(function(t1) {
 			var team1 = teamNumbers.indexOf(t1);
@@ -49,7 +60,96 @@ function processMatch(match, played, points, teamNumbers) {
 			});
 		});
 	}
+	if (match.scoreRedFinal!=null) {
+		match.Teams.forEach(function(team) {
+			var t = teamNumbers.indexOf(team.teamNumber);
+			if (team.station.substring(0, 3) == "Red") {
+				red.push(team.teamNumber);
+				points[t] += match.scoreRedFinal;
+			} else {
+				blue.push(team.teamNumber);
+				points[t] += match.scoreBlueFinal;
+			}
+		});
+		
+		addToPlayed(red);
+		addToPlayed(blue);
+	}
+}
 
-	addToPlayed(red);
-	addToPlayed(blue);
+function convertMatch(match) {
+	var red=[],blue=[];
+	match.Teams.forEach(function(team) {
+		if (team.station.substring(0, 3) == "Red") {
+			red.push(team.teamNumber);
+		} else {
+			blue.push(team.teamNumber);
+		}
+	});
+	return{
+		red:{
+			teams:red,
+			score:match.scoreRedFinal
+			
+		},
+		blue:{
+			teams:blue,
+			score:match.scoreBlueFinal
+			
+		},
+		predicted:false
+	};
+}
+
+function predictMatch(teams,opr,teamNumbers) {
+	var red=[],blue=[];
+	teams.forEach(function(team) {
+		if (team.station.substring(0, 3) == "Red") {
+			red.push(team.teamNumber);
+		} else {
+			blue.push(team.teamNumber);
+		}
+	});
+	function calcScore (alliance){
+		var predict = 0;
+		alliance.forEach(function(team) {
+			predict += opr[teamNumbers.indexOf(team)];
+		});
+		return predict;
+	}
+	return{
+		red:{
+			teams:red,
+			score:calcScore(red)
+			
+		},
+		blue:{
+			teams:blue,
+			score:calcScore(blue)
+			
+		},
+		predicted:true
+	};
+}
+
+function calcAverage(matches,teamNumbers) {
+	var points=[];
+	teamNumbers.forEach(function(team,i) {
+		points[i]=0;
+	});
+	function calcAverageSide(side) {
+		side.teams.forEach(function(team){
+			points[teamNumbers.indexOf(team)] += side.score;
+		});
+	}
+	matches.forEach(function(match) {
+		calcAverageSide(match.red);
+		calcAverageSide(match.blue);
+	});
+	var ret= [teamNumbers,points];
+	return ret[0].map(function(col, i) {
+		return ret.map(function(row) {
+			return row[i];
+		});
+	});
 }
